@@ -16,46 +16,55 @@ class DBHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-
-    return await openDatabase(
-      path,
-      version: 2, 
-      onCreate: _createDB,
-      onUpgrade: _onUpgrade, 
-    );
+    return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
   Future _createDB(Database db, int version) async {
     await db.execute('''
-    CREATE TABLE notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      content TEXT NOT NULL,
-      priority TEXT NOT NULL  -- Added priority field
-    )
+      CREATE TABLE notes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        dateTime TEXT NOT NULL,
+        priority TEXT NOT NULL,
+        category TEXT NOT NULL,
+        isArchived INTEGER NOT NULL DEFAULT 0
+      )
     ''');
-  }
-  
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute(
-          'ALTER TABLE notes ADD COLUMN priority TEXT NOT NULL DEFAULT "Medium"');
-    }
-  }
-
-  Future<void> insertNote(Map<String, dynamic> note) async {
-    final db = await instance.database;
-    await db.insert('notes', note);
   }
 
   Future<List<Map<String, dynamic>>> getNotes() async {
     final db = await instance.database;
-    return await db.query('notes');
+    final notes = await db.query('notes', where: 'isArchived = 0');
+
+    return notes.map((note) {
+      return {
+        ...note,
+        'isArchived': note['isArchived'] == 1, // Convert integer to boolean
+      };
+    }).toList();
   }
 
-  Future<void> updateNote(Map<String, dynamic> note) async {
+  Future<List<Map<String, dynamic>>> getArchivedNotes() async {
     final db = await instance.database;
-    await db.update(
+    final notes = await db.query('notes', where: 'isArchived = 1');
+
+    return notes.map((note) {
+      return {
+        ...note,
+        'isArchived': note['isArchived'] == 1, // Convert integer to boolean
+      };
+    }).toList();
+  }
+
+  Future<int> insertNote(Map<String, dynamic> note) async {
+    final db = await instance.database;
+    return await db.insert('notes', note);
+  }
+
+  Future<int> updateNote(Map<String, dynamic> note) async {
+    final db = await instance.database;
+    return await db.update(
       'notes',
       note,
       where: 'id = ?',
@@ -63,12 +72,20 @@ class DBHelper {
     );
   }
 
-  Future<void> deleteNote(int id) async {
+  Future<int> deleteNote(int id) async {
     final db = await instance.database;
-    await db.delete(
-      'notes',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('notes', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> archiveNote(int id) async {
+    final db = await instance.database;
+    return await db.update('notes', {'isArchived': 1},
+        where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> unarchiveNote(int id) async {
+    final db = await instance.database;
+    return await db.update('notes', {'isArchived': 0},
+        where: 'id = ?', whereArgs: [id]);
   }
 }

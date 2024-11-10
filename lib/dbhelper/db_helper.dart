@@ -33,6 +33,39 @@ class DBHelper {
     ''');
   }
 
+  Future<int> insertNote(Map<String, dynamic> note) async {
+    final db = await instance.database;
+    // Convert the note data to match the database schema
+    final noteData = {
+      'title': note['title'],
+      'content': note['content'],
+      'dateTime': note['createdAt'], // Use createdAt as dateTime
+      'priority': note['priority'],
+      'category': note['category'],
+      'isArchived': 0 // Default value for new notes
+    };
+    return await db.insert('notes', noteData);
+  }
+
+  Future<int> updateNote(Map<String, dynamic> note) async {
+    final db = await instance.database;
+    final noteData = {
+      'title': note['title'],
+      'content': note['content'],
+      'dateTime': note['updatedAt'], // Use updatedAt as dateTime for updates
+      'priority': note['priority'],
+      'category': note['category']
+      // Don't include isArchived in updates unless specifically changing it
+    };
+    return await db.update(
+      'notes',
+      noteData,
+      where: 'id = ?',
+      whereArgs: [note['id']],
+    );
+  }
+
+  // Rest of the methods remain the same
   Future<List<Map<String, dynamic>>> getNotes() async {
     final db = await instance.database;
     final notes = await db.query('notes', where: 'isArchived = 0');
@@ -40,7 +73,10 @@ class DBHelper {
     return notes.map((note) {
       return {
         ...note,
-        'isArchived': note['isArchived'] == 1, // Convert integer to boolean
+        'createdAt':
+            note['dateTime'], // Map dateTime to createdAt for consistency
+        'updatedAt': note['dateTime'], // Add updatedAt for UI
+        'isArchived': note['isArchived'] == 1,
       };
     }).toList();
   }
@@ -52,24 +88,11 @@ class DBHelper {
     return notes.map((note) {
       return {
         ...note,
-        'isArchived': note['isArchived'] == 1, // Convert integer to boolean
+        'createdAt': note['dateTime'],
+        'updatedAt': note['dateTime'],
+        'isArchived': note['isArchived'] == 1,
       };
     }).toList();
-  }
-
-  Future<int> insertNote(Map<String, dynamic> note) async {
-    final db = await instance.database;
-    return await db.insert('notes', note);
-  }
-
-  Future<int> updateNote(Map<String, dynamic> note) async {
-    final db = await instance.database;
-    return await db.update(
-      'notes',
-      note,
-      where: 'id = ?',
-      whereArgs: [note['id']],
-    );
   }
 
   Future<int> deleteNote(int id) async {

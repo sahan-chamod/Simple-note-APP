@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchNotes() async {
     final notes =
-        await DBHelper.instance.getNotes(); // Fetch non-archived notes
+        await DBHelper.instance.getNotes();
 
     setState(() {
       _notes = notes ?? [];
@@ -341,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addOrEditNote(),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: const Color(0xFF448AFF),
         elevation: 6.0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),

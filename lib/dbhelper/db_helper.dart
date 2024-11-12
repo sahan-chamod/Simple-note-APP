@@ -19,7 +19,7 @@ class DBHelper {
     return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
-  Future _createDB(Database db, int version) async {
+  Future<void> _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE notes(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,14 +35,14 @@ class DBHelper {
 
   Future<int> insertNote(Map<String, dynamic> note) async {
     final db = await instance.database;
-    // Convert the note data to match the database schema
     final noteData = {
       'title': note['title'],
       'content': note['content'],
-      'dateTime': note['createdAt'], // Use createdAt as dateTime
+      'dateTime': note['createdAt'],
       'priority': note['priority'],
       'category': note['category'],
-      'isArchived': 0 // Default value for new notes
+      'isArchived': 0 
+      
     };
     return await db.insert('notes', noteData);
   }
@@ -52,10 +52,9 @@ class DBHelper {
     final noteData = {
       'title': note['title'],
       'content': note['content'],
-      'dateTime': note['updatedAt'], // Use updatedAt as dateTime for updates
+      'dateTime': note['updatedAt'],
       'priority': note['priority'],
       'category': note['category']
-      // Don't include isArchived in updates unless specifically changing it
     };
     return await db.update(
       'notes',
@@ -65,26 +64,13 @@ class DBHelper {
     );
   }
 
-  // Rest of the methods remain the same
-  Future<List<Map<String, dynamic>>> getNotes() async {
+  Future<List<Map<String, dynamic>>> getNotes({bool archived = false}) async {
     final db = await instance.database;
-    final notes = await db.query('notes', where: 'isArchived = 0');
-
-    return notes.map((note) {
-      return {
-        ...note,
-        'createdAt':
-            note['dateTime'], // Map dateTime to createdAt for consistency
-        'updatedAt': note['dateTime'], // Add updatedAt for UI
-        'isArchived': note['isArchived'] == 1,
-      };
-    }).toList();
-  }
-
-  Future<List<Map<String, dynamic>>> getArchivedNotes() async {
-    final db = await instance.database;
-    final notes = await db.query('notes', where: 'isArchived = 1');
-
+    final notes = await db.query(
+      'notes',
+      where: 'isArchived = ?',
+      whereArgs: [archived ? 1 : 0],
+    );
     return notes.map((note) {
       return {
         ...note,
@@ -102,13 +88,21 @@ class DBHelper {
 
   Future<int> archiveNote(int id) async {
     final db = await instance.database;
-    return await db.update('notes', {'isArchived': 1},
-        where: 'id = ?', whereArgs: [id]);
+    return await db.update(
+      'notes',
+      {'isArchived': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<int> unarchiveNote(int id) async {
     final db = await instance.database;
-    return await db.update('notes', {'isArchived': 0},
-        where: 'id = ?', whereArgs: [id]);
+    return await db.update(
+      'notes',
+      {'isArchived': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }
